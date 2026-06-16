@@ -232,8 +232,3 @@ The codebase deliberately stays within PHP 5.3:
 - Avoids everything newer: `[]`, `??`, `?:`-as-shorthand pitfalls, `::class`,
   scalar type hints, traits, and variadics.
 
----
-
-## License
-
-MIT.
