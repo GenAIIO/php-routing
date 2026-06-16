@@ -1,6 +1,6 @@
 # GenAI Routing
 
-A minimal, dependency-free **route matching engine** for PHP, built and tested against **PHP 5.3.29**.
+A minimal, dependency-free **pure route matching engine** for PHP, built and tested against **PHP 5.3.29**.
 
 You give it an HTTP method and a request path; it matches them against your configured routes and returns the handler (e.g. `UserController@show`) together with any captured parameters. It does **not** read the request for you and it does **not** dispatch — it only answers the question *"which controller/action handles this request?"*.
 
