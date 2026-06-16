@@ -1,5 +1,5 @@
 {
-    "name": "pujacms/routing",
+    "name": "genai/routing",
     "description": "Minimal PSR-4 route matching engine, compatible with PHP 5.3.29",
     "type": "library",
     "license": "MIT",
