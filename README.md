@@ -180,7 +180,7 @@ Notes:
 ## Project layout
 
 ```
-php53-route/
+php-routing/
 ├── src/
 │   ├── Route.php        GenAI\Routing\Route       — one route; compiles pattern -> regex
 │   ├── Router.php       GenAI\Routing\Router      — register routes + match()
