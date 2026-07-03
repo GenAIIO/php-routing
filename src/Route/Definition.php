@@ -1,9 +1,13 @@
 <?php
 
-namespace GenAI\Routing;
+namespace GenAI\Routing\Route;
 
 /**
  * A single route definition: an HTTP method, a URL pattern and a handler.
+ *
+ * Build-time only — RouterRegister collects these and the RouteDumper bakes
+ * their compiled regex into a table; the runtime Router matches on that table,
+ * never on Definition objects. Mirrors GenAI\Container\Bean\Definition.
  *
  * Patterns may contain named placeholders:
  *   /user/{id}                -> {id} matches any segment ([^/]+)
@@ -12,7 +16,7 @@ namespace GenAI\Routing;
  *
  * Compatible with PHP 5.3.29 (array() syntax, no new language features).
  */
-class Route
+class Definition
 {
     /** @var string Upper-cased HTTP method, or '*' to match any method. */
     private $method;
@@ -30,16 +34,31 @@ class Route
     private $paramNames = array();
 
     /**
-     * @param string $method  HTTP method ('GET', 'POST', ...) or '*' for any.
-     * @param string $pattern URL pattern, e.g. '/user/{id}'.
-     * @param mixed  $handler Whatever you want returned on a match.
+     * Private — build a Definition through of().
+     *
+     * @param string $method
+     * @param string $pattern
+     * @param mixed  $handler
      */
-    public function __construct($method, $pattern, $handler)
+    private function __construct($method, $pattern, $handler)
     {
         $this->method  = strtoupper($method);
         $this->pattern = $this->normalize($pattern);
         $this->handler = $handler;
         $this->compile();
+    }
+
+    /**
+     * Build a route definition.
+     *
+     * @param string $method  HTTP method ('GET', 'POST', ...) or '*' for any.
+     * @param string $pattern URL pattern, e.g. '/user/{id}'.
+     * @param mixed  $handler Whatever you want returned on a match.
+     * @return Definition
+     */
+    public static function of($method, $pattern, $handler)
+    {
+        return new self($method, $pattern, $handler);
     }
 
     /**
@@ -59,39 +78,30 @@ class Route
     }
 
     /**
-     * Does this route accept the given HTTP method?
-     *
-     * @param string $method Upper-cased HTTP method.
-     * @return bool
+     * @return string Upper-cased HTTP method, or '*' for any.
      */
-    public function methodMatches($method)
+    public function getMethod()
     {
-        return $this->method === '*' || $this->method === $method;
+        return $this->method;
     }
 
     /**
-     * Try to match a request path against this route.
+     * The compiled matching regex (e.g. '#^/user/(?P<id>[^/]+)$#'). Exposed so
+     * the route dumper can bake it into a precompiled table.
      *
-     * @param string $path The request path, e.g. '/user/5'.
-     * @return array|false  An associative array of params on success
-     *                      (e.g. array('id' => '5')), or false on no match.
+     * @return string
      */
-    public function match($path)
+    public function getRegex()
     {
-        $path = $this->normalize($path);
+        return $this->regex;
+    }
 
-        if (!preg_match($this->regex, $path, $matches)) {
-            return false;
-        }
-
-        $params = array();
-        foreach ($this->paramNames as $name) {
-            if (isset($matches[$name])) {
-                $params[$name] = $matches[$name];
-            }
-        }
-
-        return $params;
+    /**
+     * @return string[] Placeholder names captured by the regex, in order.
+     */
+    public function getParamNames()
+    {
+        return $this->paramNames;
     }
 
     /**

@@ -3,46 +3,73 @@
 /**
  * Example usage of the route engine.
  *
+ *   build time : declare routes on a RouterRegister, compile to a file
+ *   runtime    : load the compiled file into a Router, then match
+ *
+ * The runtime never compiles patterns — the regexes are baked at build time.
  * Run from the command line:
  *   php example.php
  */
 
 require __DIR__ . '/autoload.php';
 
+use GenAI\Routing\Route\Definition;
 use GenAI\Routing\Router;
+use GenAI\Routing\RouterRegister;
 
-$router = new Router();
+// --- BUILD TIME: declare routes, then compile ----------------------------
+//
+// Declaration order does not decide static-vs-dynamic priority: the dumper
+// sorts by specificity (static segments beat {placeholders}), so a literal
+// route always wins over a placeholder that could also match. Registration
+// order only breaks ties between equally-specific routes.
 
-// A single route table — the kind of array you would build (or cache to a
-// file) once when the application boots. Both entry shapes are accepted.
-// First match wins, so order specific before general.
-$routeTable = array(
-    // Positional: array(method, pattern, handler)
-    array('GET',    '/users',                          'UserController@index'),
-    array('GET',    '/user/{id}',                      'UserController@show'),
-    array('GET',    '/user/{id:\d+}/edit',             'UserController@edit'),
-    array('POST',   '/users',                          'UserController@create'),
-    array('DELETE', '/user/{id}',                      'UserController@destroy'),
+$register = new RouterRegister();
 
-    // Associative: 'pattern' (or 'path') keys
-    array(
-        'method'  => 'GET',
-        'pattern' => '/posts/{slug}/comments/{commentId}',
-        'handler' => 'CommentController@show',
-    ),
-);
+$register
+    ->get('/',                                  'IndexController@index')
+    ->get('/users',                                  'UserController@index')
+    ->get('/user/{id}',                              'UserController@show')
+    ->get('/user/{id:\d+}/edit',                     'UserController@edit')
+    ->post('/users',                                 'UserController@create')
+    ->delete('/user/{id}',                           'UserController@destroy')
+    ->get('/posts/{slug}/comments/{commentId}',      'CommentController@show');
 
-// Hand the whole table to the router in one call.
-$router->load($routeTable);
+// set() registers a pre-built Definition directly — the same path an attribute
+// scanner would use.
+$register->set(Definition::of('GET', '/health', 'HealthController@ping'));
 
-// --- Pretend these come from the incoming request ------------------------
+// Declared placeholder-FIRST on purpose: the compile-time specificity sort still
+// makes the static /products/detail win over /products/{name}, so the static
+// route is not shadowed despite being registered second.
+$register
+    ->get('/products/{name}', 'ProductController@show')
+    ->get('/products/detail', 'ProductController@detail');
+
+@mkdir(__DIR__ . '/cache', 0777, true);
+$file = __DIR__ . '/cache/Router.php';        // class Cache\Router (PSR-4: cache/Router.php)
+$register->dumpToFile($file);
+
+echo "--- generated " . basename($file) . " ---\n";
+echo file_get_contents($file);
+echo "--- end generated ---\n\n";
+
+// --- RUNTIME: the compiled router is a ready subclass ---------------------
+
+$router = new \Cache\Router();
+
+// Pretend these come from incoming requests.
 $requests = array(
+    array('GET',    '/'),                  // -> IndexController@index (the root route)
     array('GET',    '/user/5'),
     array('GET',    '/users'),
     array('POST',   '/users'),
     array('DELETE', '/user/42'),
     array('GET',    '/user/7/edit'),
     array('GET',    '/posts/hello-world/comments/99'),
+    array('GET',    '/health'),
+    array('GET',    '/products/detail'),   // -> detail  (static wins over {name})
+    array('GET',    '/products/widget'),   // -> show, name=widget
     array('GET',    '/nope'),
 );
 

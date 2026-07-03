@@ -1,7 +1,8 @@
 <?php
 
 /**
- * Minimal PSR-4 autoloader for the GenAI\Routing namespace.
+ * Minimal PSR-4 autoloader for GenAI\Routing (the package) and Cache (the
+ * compiled router, cache/Router.php).
  *
  * Use this when you are not running Composer. If you are, just rely on
  * Composer's generated autoloader instead (see composer.json).
@@ -10,19 +11,21 @@
  */
 
 spl_autoload_register(function ($class) {
-    $prefix  = 'GenAI\\Routing\\';
-    $baseDir = __DIR__ . '/../src/';
+    $prefixes = array(
+        'GenAI\\Routing\\' => __DIR__ . '/../src/',
+        'Cache\\'          => __DIR__ . '/cache/',
+    );
 
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        // Not our namespace; let another registered autoloader handle it.
+    foreach ($prefixes as $prefix => $baseDir) {
+        $len = strlen($prefix);
+        if (strncmp($prefix, $class, $len) !== 0) {
+            continue;
+        }
+
+        $file = $baseDir . str_replace('\\', '/', substr($class, $len)) . '.php';
+        if (is_file($file)) {
+            require $file;
+        }
         return;
-    }
-
-    $relative = substr($class, $len);
-    $file     = $baseDir . str_replace('\\', '/', $relative) . '.php';
-
-    if (is_file($file)) {
-        require $file;
     }
 });
