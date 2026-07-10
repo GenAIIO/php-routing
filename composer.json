@@ -1,6 +1,5 @@
 {
     "name": "genai/routing",
-    "version": "1.0.0",
     "description": "Minimal PSR-4 standalone route matching engine (regexes baked at build, no runtime compilation), compatible with PHP 5.3.29. Attribute-driven routing (#[Route]) lives in genai/web.",
     "type": "library",
     "license": "Apache-2.0",
